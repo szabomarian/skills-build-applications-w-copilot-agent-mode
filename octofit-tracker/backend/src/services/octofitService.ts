@@ -51,8 +51,50 @@ export async function listTeams() {
   return Team.find().lean();
 }
 
-export async function createTeam(_input: unknown) {
-  throw Object.assign(new Error('Team validation is not implemented yet'), { status: 501 });
+export async function createTeam(input: unknown) {
+  if (!input || typeof input !== 'object') {
+    throw Object.assign(new Error('Invalid team input'), { status: 400 });
+  }
+
+  const { name, mascot, members = [] } = input as {
+    name?: unknown;
+    mascot?: unknown;
+    members?: unknown;
+  };
+
+  if (typeof name !== 'string' || name.trim().length === 0) {
+    throw Object.assign(new Error('Team name is required'), { status: 400 });
+  }
+  if (typeof mascot !== 'string' || mascot.trim().length === 0) {
+    throw Object.assign(new Error('Team mascot is required'), { status: 400 });
+  }
+  if (!Array.isArray(members)) {
+    throw Object.assign(new Error('Team members must be an array'), { status: 400 });
+  }
+
+  const memberIds = [...new Set(members)];
+  if (memberIds.some((memberId) => typeof memberId !== 'string' || !mongoose.Types.ObjectId.isValid(memberId))) {
+    throw Object.assign(new Error('Valid member IDs are required'), { status: 400 });
+  }
+
+  const existingMembers = await User.find({
+    _id: { $in: memberIds as string[] },
+  }).lean();
+  if (existingMembers.length !== memberIds.length) {
+    throw Object.assign(new Error('One or more team members were not found'), { status: 404 });
+  }
+
+  const team = await Team.create({
+    name: name.trim(),
+    mascot: mascot.trim(),
+    members: memberIds,
+  });
+  await User.updateMany(
+    { _id: { $in: memberIds as string[] } },
+    { $set: { team: team._id } },
+  );
+
+  return Team.findById(team._id).lean();
 }
 
 export async function getLeaderboard() {
