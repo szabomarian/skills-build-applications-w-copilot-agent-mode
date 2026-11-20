@@ -125,8 +125,54 @@ export async function getLeaderboard() {
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 }
 
-export async function suggestWorkouts(_userEmail: string) {
-  return Workout.find().limit(1).lean();
+export async function suggestWorkouts(userEmail: string) {
+  if (typeof userEmail !== 'string' || userEmail.trim().length === 0) {
+    throw Object.assign(new Error('User email is required'), { status: 400 });
+  }
+
+  const normalizedEmail = userEmail.trim().toLowerCase();
+  const user = await User.findOne({ email: normalizedEmail }).lean();
+  if (!user) {
+    throw Object.assign(new Error('User not found'), { status: 404 });
+  }
+
+  const activities = await Activity.find({ user: user._id }).lean();
+  const activityTypes = new Set(
+    activities.map((activity) => activity.type.toLowerCase()),
+  );
+  const fitnessGoal = user.fitnessGoal?.toLowerCase();
+
+  const focusForActivity = (type: string) => {
+    if (type === 'run' || type === 'cycle') return 'endurance';
+    if (type === 'strength') return 'strength';
+    if (type === 'walk') return 'mobility';
+    return type;
+  };
+  const targetFocuses = new Set([
+    ...(fitnessGoal ? [fitnessGoal] : []),
+    ...[...activityTypes].map(focusForActivity),
+  ]);
+
+  const workouts = await Workout.find().lean();
+  const suggestions = workouts
+    .map((workout) => {
+      const focus = workout.focus?.toLowerCase() ?? '';
+      const matchesGoal = fitnessGoal === focus;
+      const matchingActivity = [...activityTypes].find(
+        (type) => focusForActivity(type) === focus || type === focus,
+      );
+      const score = (matchesGoal ? 2 : 0) + (matchingActivity ? 1 : 0);
+      const reason = matchingActivity
+        ? `Matches your ${matchingActivity} activity and ${focus} focus`
+        : matchesGoal
+          ? `Matches your ${fitnessGoal} fitness goal`
+          : `Suggested for ${targetFocuses.size > 0 ? 'your activity pattern' : 'general fitness'}`;
+      return { ...workout, reason, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .map(({ score: _score, ...workout }) => workout);
+
+  return suggestions;
 }
 
 export { User };
