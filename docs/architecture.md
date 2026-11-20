@@ -30,13 +30,13 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 Record your plan here before editing code.
 
-- Presentation tier decision: React 19, Vite, React Router, Bootstrap, and a shared API client in `octofit-tracker/frontend/src`
-- Logic tier decision:  Express and TypeScript routes/services in `octofit-tracker/backend/src` expose `/api/*` behavior on port `8000`
-- Data tier decision: Mongoose models and seed data in `octofit-tracker/backend/src/models` and `src/scripts/seed.ts` persist to MongoDB on port `27017`
-- Activity tracking approach:
-- Team management approach:
-- Leaderboard approach:
-- Workout suggestions approach:
+- Presentation tier decision: Keep route components under `src/components`, use `src/api/client.ts` for every `/api` request, and render loading, empty, success, and accessible error states with React 19 and Bootstrap.
+- Logic tier decision: Keep HTTP handling in Express routes and validation and domain behavior in explicit functions in `src/services/octofitService.ts`. Invalid IDs or missing records return deliberate 4xx responses; the shared error middleware handles failures consistently.
+- Data tier decision: Use Mongoose schemas for field and relationship validation, seed stable demo fixtures with upserts, and reconcile demo team membership without clearing unrelated records.
+- Activity tracking approach: Accept `userId`, `teamId`, `type`, and `minutes`; verify well-formed existing references, reject invalid input with 4xx, assign one point per minute, and set `occurredAt` when the activity is created.
+- Team management approach: Create teams with a required `name`, required `mascot`, and a default empty `members` array. Reject missing names and expose submitted team data through list and create responses.
+- Leaderboard approach: Sum activity `points` by team, sort teams from highest to lowest total, and return `teamName`, `totalPoints`, and 1-based `rank`.
+- Workout suggestions approach: Resolve the seeded user by email, choose workout focus from a recent activity type or the user's fitness goal, and return matching workouts with a reason that names the relevant activity or goal.
 
 ## Test plan
 
