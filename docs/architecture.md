@@ -30,9 +30,9 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 Record your plan here before editing code.
 
-- Presentation tier decision:
-- Logic tier decision:
-- Data tier decision:
+- Presentation tier decision: React 19, Vite, React Router, Bootstrap, and a shared API client in `octofit-tracker/frontend/src`
+- Logic tier decision:  Express and TypeScript routes/services in `octofit-tracker/backend/src` expose `/api/*` behavior on port `8000`
+- Data tier decision: Mongoose models and seed data in `octofit-tracker/backend/src/models` and `src/scripts/seed.ts` persist to MongoDB on port `27017`
 - Activity tracking approach:
 - Team management approach:
 - Leaderboard approach:
