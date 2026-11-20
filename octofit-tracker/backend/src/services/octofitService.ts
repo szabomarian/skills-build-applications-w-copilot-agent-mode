@@ -98,7 +98,31 @@ export async function createTeam(input: unknown) {
 }
 
 export async function getLeaderboard() {
-  return [];
+  const totals = await Activity.aggregate([
+    {
+      $group: {
+        _id: '$team',
+        totalPoints: { $sum: '$points' },
+      },
+    },
+  ]);
+
+  if (totals.length === 0) return [];
+
+  const teams = await Team.find({
+    _id: { $in: totals.map((entry) => entry._id) },
+  }).lean();
+  const teamNames = new Map(
+    teams.map((team) => [team._id.toString(), team.name]),
+  );
+
+  return totals
+    .map((entry) => ({
+      teamName: teamNames.get(entry._id.toString()) ?? 'Unknown team',
+      totalPoints: entry.totalPoints,
+    }))
+    .sort((a, b) => b.totalPoints - a.totalPoints || a.teamName.localeCompare(b.teamName))
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
 }
 
 export async function suggestWorkouts(_userEmail: string) {
